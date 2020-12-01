@@ -285,40 +285,44 @@ export class HttpClient {
 		return this.request<T>({ method: 'PATCH', url, ...options });
 	}
 
-	private readonly url: string | undefined;
+	private _url: string | undefined;
 
 	constructor(private readonly _logger?: Logger) {}
+
+	setUrl(url: string): void {
+		this._url = url;
+	}
 
 	request<T>(options: CommonHttpRequestOptions): Promise<HttpResponse<T>> {
 		return HttpClient.request<T>(options, this._logger);
 	}
 
 	get<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
-		return HttpClient.request<T>({ method: 'GET', url: this.url ? resolveUrl(this.url, url) : url, ...options }, this._logger);
+		return HttpClient.request<T>({ method: 'GET', url: this._url ? resolveUrl(this._url, url) : url, ...options }, this._logger);
 	}
 
-	delete<T>(url: string, options: HttpRequestOptions): Promise<HttpResponse<T>> {
-		return HttpClient.request<T>({ method: 'DELETE', url: this.url ? resolveUrl(this.url, url) : url, ...options }, this._logger);
+	delete<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
+		return HttpClient.request<T>({ method: 'DELETE', url: this._url ? resolveUrl(this._url, url) : url, ...options }, this._logger);
 	}
 
 	trace<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
-		return HttpClient.request<T>({ method: 'TRACE', url: this.url ? resolveUrl(this.url, url) : url, ...options }, this._logger);
+		return HttpClient.request<T>({ method: 'TRACE', url: this._url ? resolveUrl(this._url, url) : url, ...options }, this._logger);
 	}
 
 	head<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
-		return HttpClient.request<T>({ method: 'HEAD', url: this.url ? resolveUrl(this.url, url) : url, ...options }, this._logger);
+		return HttpClient.request<T>({ method: 'HEAD', url: this._url ? resolveUrl(this._url, url) : url, ...options }, this._logger);
 	}
 
-	post<T>(url: string, options: HttpRequestOptions): Promise<HttpResponse<T>> {
-		return HttpClient.request<T>({ method: 'POST', url: this.url ? resolveUrl(this.url, url) : url, ...options }, this._logger);
+	post<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
+		return HttpClient.request<T>({ method: 'POST', url: this._url ? resolveUrl(this._url, url) : url, ...options }, this._logger);
 	}
 
-	put<T>(url: string, options: HttpRequestOptions): Promise<HttpResponse<T>> {
-		return HttpClient.request<T>({ method: 'PUT', url: this.url ? resolveUrl(this.url, url) : url, ...options }, this._logger);
+	put<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
+		return HttpClient.request<T>({ method: 'PUT', url: this._url ? resolveUrl(this._url, url) : url, ...options }, this._logger);
 	}
 
-	patch<T>(url: string, options: HttpRequestOptions): Promise<HttpResponse<T>> {
-		return HttpClient.request<T>({ method: 'PATCH', url: this.url ? resolveUrl(this.url, url) : url, ...options }, this._logger);
+	patch<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
+		return HttpClient.request<T>({ method: 'PATCH', url: this._url ? resolveUrl(this._url, url) : url, ...options }, this._logger);
 	}
 }
 
