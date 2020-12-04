@@ -135,7 +135,7 @@ export class HttpClient {
 			const req = requestOptions.protocol === 'http:' ? httpRequest(requestOptions, callback) : httpsRequest(requestOptions, callback);
 
 			function callback(res: IncomingMessage): void {
-				if (res.statusCode! > 99 && res.statusCode!.toString().startsWith('2')) {
+				if (res.statusCode! < 100 || res.statusCode! >= 400) {
 					logger.debug('request fail with code', res.statusCode);
 				}
 
