@@ -6,7 +6,7 @@ import { parse as parseUrl, resolve as resolveUrl } from 'url';
 
 import { HttpHeaders } from './http-headers';
 import { HttpResponse } from './http-response';
-import type { CommonHttpRequestOptions, HttpQuery, HttpRequestOptions, Logger } from './types';
+import type { CommonHttpRequestOptions, HttpQuery, HttpRequestOptions, HttpRequestOptionsWithBody, Logger } from './types';
 
 export class HttpClient {
 	protected static readonly _logger: { debug(...args: any[]): void } = console;
@@ -169,7 +169,7 @@ export class HttpClient {
 		return this.request<T>({ method: 'GET', url, ...options });
 	}
 
-	static delete<T>(url: string, options: HttpRequestOptions): Promise<HttpResponse<T>> {
+	static delete<T>(url: string, options: HttpRequestOptionsWithBody): Promise<HttpResponse<T>> {
 		return this.request<T>({ method: 'DELETE', url, ...options });
 	}
 
@@ -177,19 +177,19 @@ export class HttpClient {
 		return this.request<T>({ method: 'TRACE', url, ...options });
 	}
 
-	static head<T>(url: string, options: HttpRequestOptions): Promise<HttpResponse<T>> {
+	static head<T>(url: string, options: HttpRequestOptionsWithBody): Promise<HttpResponse<T>> {
 		return this.request<T>({ method: 'HEAD', url, ...options });
 	}
 
-	static post<T>(url: string, options: HttpRequestOptions): Promise<HttpResponse<T>> {
+	static post<T>(url: string, options: HttpRequestOptionsWithBody): Promise<HttpResponse<T>> {
 		return this.request<T>({ method: 'POST', url, ...options });
 	}
 
-	static put<T>(url: string, options: HttpRequestOptions): Promise<HttpResponse<T>> {
+	static put<T>(url: string, options: HttpRequestOptionsWithBody): Promise<HttpResponse<T>> {
 		return this.request<T>({ method: 'PUT', url, ...options });
 	}
 
-	static patch<T>(url: string, options: HttpRequestOptions): Promise<HttpResponse<T>> {
+	static patch<T>(url: string, options: HttpRequestOptionsWithBody): Promise<HttpResponse<T>> {
 		return this.request<T>({ method: 'PATCH', url, ...options });
 	}
 
@@ -213,7 +213,7 @@ export class HttpClient {
 		return HttpClient.request<T>({ method: 'GET', url: this.resolveUrl(url), ...options }, this._logger);
 	}
 
-	delete<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
+	delete<T>(url: string, options: HttpRequestOptionsWithBody = {}): Promise<HttpResponse<T>> {
 		return HttpClient.request<T>({ method: 'DELETE', url: this.resolveUrl(url), ...options }, this._logger);
 	}
 
@@ -221,19 +221,19 @@ export class HttpClient {
 		return HttpClient.request<T>({ method: 'TRACE', url: this.resolveUrl(url), ...options }, this._logger);
 	}
 
-	head<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
+	head<T>(url: string, options: HttpRequestOptionsWithBody = {}): Promise<HttpResponse<T>> {
 		return HttpClient.request<T>({ method: 'HEAD', url: this.resolveUrl(url), ...options }, this._logger);
 	}
 
-	post<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
+	post<T>(url: string, options: HttpRequestOptionsWithBody = {}): Promise<HttpResponse<T>> {
 		return HttpClient.request<T>({ method: 'POST', url: this.resolveUrl(url), ...options }, this._logger);
 	}
 
-	put<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
+	put<T>(url: string, options: HttpRequestOptionsWithBody = {}): Promise<HttpResponse<T>> {
 		return HttpClient.request<T>({ method: 'PUT', url: this.resolveUrl(url), ...options }, this._logger);
 	}
 
-	patch<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
+	patch<T>(url: string, options: HttpRequestOptionsWithBody = {}): Promise<HttpResponse<T>> {
 		return HttpClient.request<T>({ method: 'PATCH', url: this.resolveUrl(url), ...options }, this._logger);
 	}
 }
