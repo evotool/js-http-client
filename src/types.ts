@@ -8,19 +8,27 @@ export interface HttpQuery {
 export interface HttpRequestOptions {
 
 	/**
+	 * Request http headers
 	 * @default { 'Content-Type': typeof body === 'object' ? 'application/json; charset=utf-8' : 'text/plain; charset=utf-8', 'Content-Length': BodyByteLength }
 	 */
 	headers?: HttpHeaders | { [key: string]: number | string | string[] };
 
 	/**
+	 * Request query params
 	 * @default {}
 	 */
 	query?: HttpQuery;
 
 	/**
+	 * Request max number of redirects
 	 * @default 1
 	 */
 	redirects?: number;
+
+	/**
+	 * Request query stringifier
+	 */
+	queryStringifier?(query: { [key: string]: any }): string;
 }
 
 export interface HttpRequestOptionsWithBody extends HttpRequestOptions {

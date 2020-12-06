@@ -65,6 +65,7 @@ export class HttpClient {
 
 	static request(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<string>>;
 	static request(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<Buffer>>;
+	static request(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<null>>;
 	static request<T>(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<T>>;
 	static request<T>(options: CommonHttpRequestOptions, logger: Logger = this._logger, redirectFrom?: HttpResponse<T>): Promise<HttpResponse<T | string | Buffer | null>> {
 		return new Promise<HttpResponse<T | string | Buffer | null>>((resolve, reject) => {
@@ -118,7 +119,8 @@ export class HttpClient {
 				return;
 			}
 
-			const req = requestOptions.protocol === 'http:' ? httpRequest(requestOptions, callback) : httpsRequest(requestOptions, callback);
+			const requestHandler = requestOptions.protocol === 'http:' ? httpRequest : httpsRequest;
+			const req = requestHandler(requestOptions, callback);
 
 			let status = 0; // 0 - pending, 1 - resolved, 2 - rejected
 
