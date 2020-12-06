@@ -1,6 +1,6 @@
 {
 	"name": "@evojs/http-client",
-	"version": "0.0.0-alpha1",
+	"version": "0.0.0-alpha2",
 	"description": "Nodejs HttpClient class",
 	"license": "MIT",
 	"main": "index.js",
