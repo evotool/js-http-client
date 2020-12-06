@@ -63,11 +63,9 @@ export class HttpClient {
 			.join('&')}`;
 	};
 
-	static request(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<string>>;
-	static request(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<Buffer>>;
-	static request(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<null>>;
+	static request(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<string | object | Buffer | null>>;
 	static request<T>(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<T>>;
-	static request<T>(options: CommonHttpRequestOptions, logger: Logger = this._logger, redirectFrom?: HttpResponse<T>): Promise<HttpResponse<T | string | Buffer | null>> {
+	static request<T>(options: CommonHttpRequestOptions, logger: Logger = this._logger, redirectFrom?: HttpResponse<T>): Promise<HttpResponse<T | string | object | Buffer | null>> {
 		return new Promise<HttpResponse<T | string | Buffer | null>>((resolve, reject) => {
 			let { method, url, headers, query, body, redirects = 1 } = options;
 

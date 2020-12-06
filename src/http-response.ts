@@ -4,7 +4,7 @@ import type { IncomingHttpHeaders, IncomingMessage } from 'http';
 import type { Logger } from './types';
 
 export class HttpResponse<T> {
-	private _body?: Promise<T | string | Buffer | null>;
+	private _body?: Promise<T>;
 
 	url: string;
 	method: string;
@@ -45,9 +45,9 @@ export class HttpResponse<T> {
 		this._res.destroy();
 	}
 
-	body(): Promise<T | string | Buffer | null> {
+	body(): Promise<T> {
 		if (!this._body) {
-			this._body = new Promise<T | string | Buffer | null>((r, t) => {
+			this._body = new Promise<T>((r, t) => {
 				if (this.destroyed) {
 					return t(new Error('Destroyed connection'));
 				}
@@ -62,7 +62,7 @@ export class HttpResponse<T> {
 					this._logger?.debug(`${this.url} body end with ${chunks.length} chunks`);
 
 					if (!this._res.headers['content-type'] && !chunks.length) {
-						return r(null);
+						return r(null as unknown as T);
 					}
 
 					const { type } = parseContentType(this._res);
@@ -79,10 +79,10 @@ export class HttpResponse<T> {
 
 						default:
 							if (chunks[0] instanceof Buffer) {
-								return r(Buffer.concat(chunks as Buffer[]));
+								return r(Buffer.concat(chunks as Buffer[]) as unknown as T);
 							}
 
-							r(chunks.join(''));
+							r(chunks.join('') as unknown as T);
 
 							break;
 					}
