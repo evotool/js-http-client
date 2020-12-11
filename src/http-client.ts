@@ -129,7 +129,7 @@ export class HttpClient {
 
 				status = 2;
 				reject(err);
-				logger.debug(`${url} request error`);
+				logger.debug(`${url} request error: ${err.message}`);
 			});
 
 			req.on('finish', () => {
