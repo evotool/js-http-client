@@ -1,16 +1,18 @@
 import { parse as parseContentType } from 'content-type';
 import type { IncomingHttpHeaders, IncomingMessage } from 'http';
 
-import type { Logger } from './types';
+import type { BodyParser, Logger } from './types';
 
 export class HttpResponse<T> {
+	static DEFAULT_CHARSET = 'utf-8';
+
 	private _body?: Promise<T>;
 
-	url: string;
-	method: string;
-	statusCode: number;
-	statusMessage: string;
-	headers: IncomingHttpHeaders;
+	readonly url: string;
+	readonly method: string;
+	readonly statusCode: number;
+	readonly statusMessage: string;
+	readonly headers: IncomingHttpHeaders;
 
 	get redirects(): HttpResponse<T>[] {
 		const redirects: HttpResponse<T>[] = [];
@@ -32,7 +34,7 @@ export class HttpResponse<T> {
 		return this._res.destroyed;
 	}
 
-	constructor(private readonly _res: IncomingMessage, private readonly _logger: Logger, private readonly _redirectFrom?: HttpResponse<T>) {
+	constructor(private readonly _res: IncomingMessage, private readonly _bodyParser: BodyParser, private readonly _logger: Logger, private readonly _redirectFrom?: HttpResponse<T>) {
 		this.url = _res.url!;
 		this.method = _res.method!;
 		this.statusCode = _res.statusCode || 0;
@@ -52,40 +54,42 @@ export class HttpResponse<T> {
 					return t(new Error('Destroyed connection'));
 				}
 
-				const chunks: string[] | Buffer[] = [];
+				const chunks: Buffer[] = [];
 
 				this._res.on('data', (chunk: string | Buffer) => {
-					chunks.push(chunk as any);
+					chunks.push(chunk instanceof Buffer ? chunk : Buffer.from(chunk));
 				});
 
 				this._res.on('end', () => {
 					this._logger?.debug(`${this.url} body end with ${chunks.length} chunks`);
 
 					if (!this._res.headers['content-type'] && !chunks.length) {
-						return r(null as unknown as T);
+						r(null as unknown as T);
+
+						return;
 					}
 
-					const { type } = parseContentType(this._res);
+					const { type, parameters: { charset } } = parseContentType(this._res);
 
-					switch (type) {
-						case 'application/json':
-							try {
-								r(JSON.parse(chunks.join('')) as T);
-							} catch (err) {
-								t(err);
-							}
+					const buffer = Buffer.concat(chunks);
 
-							break;
+					if ((this._bodyParser === 'auto' && type === 'application/json') || this._bodyParser === 'json') {
+						try {
+							r(JSON.parse(buffer.toString(charset as any || HttpResponse.DEFAULT_CHARSET)) as T);
+						} catch (err) {
+							t(err);
+						}
 
-						default:
-							if (chunks[0] instanceof Buffer) {
-								return r(Buffer.concat(chunks as Buffer[]) as unknown as T);
-							}
-
-							r(chunks.join('') as unknown as T);
-
-							break;
+						return;
 					}
+
+					if (this._bodyParser === 'text') {
+						r(buffer.toString(charset as any || HttpResponse.DEFAULT_CHARSET) as unknown as T);
+
+						return;
+					}
+
+					r(buffer as unknown as T);
 				});
 
 				this._res.on('error', (err: Error) => {

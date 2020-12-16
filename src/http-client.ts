@@ -67,7 +67,7 @@ export class HttpClient {
 	static request<T>(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<T>>;
 	static request<T>(options: CommonHttpRequestOptions, logger: Logger = this._logger, redirectFrom?: HttpResponse<T>): Promise<HttpResponse<T | string | object | Buffer | null>> {
 		return new Promise<HttpResponse<T | string | Buffer | null>>((resolve, reject) => {
-			let { method, url, headers, query, body, redirects = 1 } = options;
+			let { method, url, headers, query, body, redirects = 1, bodyParser = 'auto' } = options;
 
 			const parsedUrl = parseUrl(url);
 			parsedUrl.query = this.stringifyQuery(query);
@@ -91,7 +91,7 @@ export class HttpClient {
 
 			const callback = (res: IncomingMessage): void => {
 				const statusCode = res.statusCode!;
-				const response = new HttpResponse<T | string | Buffer>(res, logger, redirectFrom);
+				const response = new HttpResponse<T | string | Buffer>(res, bodyParser, logger, redirectFrom);
 
 				if (statusCode >= 300 && statusCode < 400) {
 					const location = res.headers['location'];

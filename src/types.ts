@@ -29,6 +29,12 @@ export interface HttpRequestOptions {
 	 * Request query stringifier
 	 */
 	queryStringifier?(query: { [key: string]: any }): string;
+
+	/**
+	 * Body parser
+	 * @default 'auto'
+	 */
+	bodyParser?: BodyParser;
 }
 
 export interface HttpRequestOptionsWithBody extends HttpRequestOptions {
@@ -43,3 +49,5 @@ export interface CommonHttpRequestOptions extends HttpRequestOptionsWithBody {
 export interface Logger {
 	debug(...args: any[]): void;
 }
+
+export type BodyParser = 'auto' | 'json' | 'text' | 'raw';
