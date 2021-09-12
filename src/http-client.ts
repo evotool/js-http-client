@@ -1,237 +1,188 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import * as FormData from 'form-data';
-import { IncomingMessage, request as httpRequest } from 'http';
+import type { IncomingMessage } from 'http';
+import { request as httpRequest } from 'http';
 import { request as httpsRequest } from 'https';
-import { parse as parseUrl, resolve as resolveUrl } from 'url';
+import { URL } from 'url';
 
+import { joinUrl, serializeQuery } from './helpers';
 import { HttpHeaders } from './http-headers';
 import { HttpResponse } from './http-response';
-import type { CommonHttpRequestOptions, HttpQuery, HttpRequestOptions, HttpRequestOptionsWithBody, Logger } from './types';
+import type { CommonHttpRequestOptions, HttpRequestOptions, HttpRequestOptionsWithBody, Logger } from './types';
 
 export class HttpClient {
-	protected static readonly _logger: { debug(...args: any[]): void } = console;
+  protected static readonly _logger: Logger = console;
+  static serializeQuery = serializeQuery;
 
-	static stringifyQuery = (query?: HttpQuery): string => {
-		if (!query) {
-			return '';
-		}
+  private _baseUrl: string | undefined;
 
-		return `?${Object
-			.entries(query)
-			.map(([key, value]) => {
-				key = encodeURIComponent(key);
+  constructor(private readonly _logger?: Logger) {}
 
-				if (Array.isArray(value)) {
-					return value.map((v) => {
-						if (typeof v === 'string') {
-							return `${key}=${encodeURIComponent(v)}`;
-						}
+  setUrl(baseUrl: string): void {
+    this._baseUrl = baseUrl;
+  }
 
-						if (typeof v === 'number' && isFinite(v)) {
-							return `${key}=${encodeURIComponent(v)}`;
-						}
+  resolveUrl(url: string): string {
+    return this._baseUrl ? joinUrl(this._baseUrl, url) : url;
+  }
 
-						if (typeof v === 'boolean') {
-							return `${key}=${v ? '1' : '0'}`;
-						}
+  request<T>(options: CommonHttpRequestOptions): Promise<HttpResponse<T>> {
+    return HttpClient.request<T>(options, this._logger);
+  }
 
-						if (v instanceof Date) {
-							return `${key}=${v.toISOString()}`;
-						}
-					})
-						.filter(Boolean)
-						.join('&');
-				}
+  get<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
+    return HttpClient.request<T>({ method: 'GET', url: this.resolveUrl(url), ...options }, this._logger);
+  }
 
-				if (typeof value === 'string') {
-					return `${key}=${encodeURIComponent(value)}`;
-				}
+  delete<T>(url: string, options: HttpRequestOptionsWithBody = {}): Promise<HttpResponse<T>> {
+    return HttpClient.request<T>({ method: 'DELETE', url: this.resolveUrl(url), ...options }, this._logger);
+  }
 
-				if (typeof value === 'number' && isFinite(value)) {
-					return `${key}=${encodeURIComponent(`${value}`)}`;
-				}
+  trace<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
+    return HttpClient.request<T>({ method: 'TRACE', url: this.resolveUrl(url), ...options }, this._logger);
+  }
 
-				if (typeof value === 'boolean') {
-					return `${key}=${value ? '1' : '0'}`;
-				}
+  head<T>(url: string, options: HttpRequestOptionsWithBody = {}): Promise<HttpResponse<T>> {
+    return HttpClient.request<T>({ method: 'HEAD', url: this.resolveUrl(url), ...options }, this._logger);
+  }
 
-				if (value instanceof Date) {
-					return `${key}=${value.toISOString()}`;
-				}
-			})
-			.filter(Boolean)
-			.join('&')}`;
-	};
+  post<T>(url: string, options: HttpRequestOptionsWithBody = {}): Promise<HttpResponse<T>> {
+    return HttpClient.request<T>({ method: 'POST', url: this.resolveUrl(url), ...options }, this._logger);
+  }
 
-	static request(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<string | object | Buffer | null>>;
-	static request<T>(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<T>>;
-	static request<T>(options: CommonHttpRequestOptions, logger: Logger = this._logger, redirectFrom?: HttpResponse<T>): Promise<HttpResponse<T | string | object | Buffer | null>> {
-		return new Promise<HttpResponse<T | string | Buffer | null>>((resolve, reject) => {
-			let { method, url, headers, query, body, redirects = 1, bodyParser = 'auto' } = options;
+  put<T>(url: string, options: HttpRequestOptionsWithBody = {}): Promise<HttpResponse<T>> {
+    return HttpClient.request<T>({ method: 'PUT', url: this.resolveUrl(url), ...options }, this._logger);
+  }
 
-			const parsedUrl = parseUrl(url);
-			parsedUrl.query = this.stringifyQuery(query);
+  patch<T>(url: string, options: HttpRequestOptionsWithBody = {}): Promise<HttpResponse<T>> {
+    return HttpClient.request<T>({ method: 'PATCH', url: this.resolveUrl(url), ...options }, this._logger);
+  }
 
-			if (!parsedUrl.port) {
-				parsedUrl.port = parsedUrl.protocol === 'https:' ? '443' : '80';
-			}
+  static request(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<string | object | Buffer | null>>;
+  static request<T>(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<T>>;
+  static request<T>(options: CommonHttpRequestOptions, logger: Logger = this._logger, redirectFrom?: HttpResponse<T>): Promise<HttpResponse<T | string | object | Buffer | null>> {
+    return new Promise<HttpResponse<T | string | Buffer | null>>((resolve, reject) => {
+      let { method, url, headers, query, body, redirects = 1, bodyParser = 'auto' } = options;
 
-			if (!(headers instanceof HttpHeaders)) {
-				headers = new HttpHeaders(headers);
-			}
+      const parsedUrl = new URL(url);
+      parsedUrl.search = this.serializeQuery(query);
 
-			const requestOptions = {
-				method,
-				headers: headers.toObject(),
-				protocol: `${parsedUrl.protocol || 'http:'}` as 'http:' | 'https:',
-				hostname: parsedUrl.hostname,
-				port: parsedUrl.port,
-				path: (parsedUrl.path || '/') + parsedUrl.query,
-			};
+      if (!parsedUrl.port) {
+        parsedUrl.port = parsedUrl.protocol === 'https:' ? '443' : '80';
+      }
 
-			const callback = (res: IncomingMessage): void => {
-				const statusCode = res.statusCode!;
-				const response = new HttpResponse<T | string | Buffer>(res, bodyParser, logger, redirectFrom);
+      if (!(headers instanceof HttpHeaders)) {
+        headers = new HttpHeaders(headers);
+      }
 
-				if (statusCode >= 300 && statusCode < 400) {
-					const location = res.headers['location'];
+      const requestOptions = {
+        method,
+        headers: headers.toObject(),
+        protocol: `${parsedUrl.protocol || 'http:'}` as 'http:' | 'https:',
+        hostname: parsedUrl.hostname,
+        port: parsedUrl.port,
+        path: parsedUrl.pathname + parsedUrl.search,
+      };
 
-					if (location && redirects > response.redirects.length) {
-						const url = location;
+      const callback = (res: IncomingMessage): void => {
+        const statusCode = res.statusCode!;
+        const response = new HttpResponse<T | string | Buffer>(res, bodyParser, logger, redirectFrom);
 
-						// @ts-ignore
-						return resolve(this.request({ ...options, url }, logger, response));
-					}
-				} else if (statusCode >= 400 && statusCode < 500) {
-					logger.debug('request fail with code', statusCode);
-				} else if (statusCode >= 500) {
-					logger.debug('request fail with code', statusCode);
-				}
+        if (statusCode >= 300 && statusCode < 400) {
+          const location = res.headers.location;
 
-				resolve(response);
-			};
+          if (location && redirects > response.redirects.length) {
+            const url = location;
 
-			if (body instanceof FormData) {
-				body.submit(requestOptions, (err, res) => err ? reject(err) : callback(res));
+            // @ts-ignore
+            return resolve(this.request({ ...options, url }, logger, response));
+          }
+        } else if (statusCode >= 400 && statusCode < 500) {
+          logger.debug('request fail with code', statusCode);
+        } else if (statusCode >= 500) {
+          logger.debug('request fail with code', statusCode);
+        }
 
-				return;
-			}
+        resolve(response);
+      };
 
-			const requestHandler = requestOptions.protocol === 'http:' ? httpRequest : httpsRequest;
-			const req = requestHandler(requestOptions, callback);
+      if (body instanceof FormData) {
+        body.submit(requestOptions, (err, res) => err ? reject(err) : callback(res));
 
-			let status = 0; // 0 - pending, 1 - resolved, 2 - rejected
+        return;
+      }
 
-			req.on('error', (err) => {
-				if (status > 0) {
-					return;
-				}
+      const requestHandler = requestOptions.protocol === 'http:' ? httpRequest : httpsRequest;
+      const req = requestHandler(requestOptions, callback);
 
-				status = 2;
-				reject(err);
-				logger.debug(`${url} request error: ${err.message}`);
-			});
+      let status = 0; // 0 - pending, 1 - resolved, 2 - rejected
 
-			req.on('finish', () => {
-				if (status > 0) {
-					return;
-				}
+      req.on('error', (err) => {
+        if (status > 0) {
+          return;
+        }
 
-				status = 1;
-				logger.debug(`${url} request finish`);
-			});
+        status = 2;
+        reject(err);
+        logger.debug(`${url} request error: ${err.message}`);
+      });
 
-			if (body && method !== 'GET' && method !== 'TRACE') {
-				if (typeof body === 'object') {
-					try {
-						body = JSON.stringify(body);
-					} catch (err) {
-						return reject(err);
-					}
+      req.on('finish', () => {
+        if (status > 0) {
+          return;
+        }
 
-					req.setHeader('Content-Length', headers.get('content-length') || Buffer.byteLength(body));
-					req.setHeader('Content-Type', 'application/json; charset=utf-8');
-				} else {
-					req.setHeader('Content-Type', headers.get('content-type') || 'text/plain; charset=utf-8');
-					req.setHeader('Content-Length', headers.get('content-length') || Buffer.byteLength(body));
-				}
+        status = 1;
+        logger.debug(`${url} request finish`);
+      });
 
-				req.write(body);
-			}
+      if (body && method !== 'GET' && method !== 'TRACE') {
+        if (typeof body === 'object' && !(body instanceof Buffer)) {
+          try {
+            body = JSON.stringify(body);
+          } catch (err) {
+            return reject(err);
+          }
 
-			req.end();
-		});
-	}
+          req.setHeader('Content-Length', headers.get('content-length') || Buffer.byteLength(body));
+          req.setHeader('Content-Type', 'application/json; charset=utf-8');
+        } else {
+          req.setHeader('Content-Type', headers.get('content-type') || 'text/plain; charset=utf-8');
+          req.setHeader('Content-Length', headers.get('content-length') || Buffer.byteLength(body));
+        }
 
-	static get<T>(url: string, options: HttpRequestOptions): Promise<HttpResponse<T>> {
-		return this.request<T>({ method: 'GET', url, ...options });
-	}
+        req.write(body);
+      }
 
-	static delete<T>(url: string, options: HttpRequestOptionsWithBody): Promise<HttpResponse<T>> {
-		return this.request<T>({ method: 'DELETE', url, ...options });
-	}
+      req.end();
+    });
+  }
 
-	static trace<T>(url: string, options: HttpRequestOptions): Promise<HttpResponse<T>> {
-		return this.request<T>({ method: 'TRACE', url, ...options });
-	}
+  static get<T>(url: string, options: HttpRequestOptions): Promise<HttpResponse<T>> {
+    return this.request<T>({ method: 'GET', url, ...options });
+  }
 
-	static head<T>(url: string, options: HttpRequestOptionsWithBody): Promise<HttpResponse<T>> {
-		return this.request<T>({ method: 'HEAD', url, ...options });
-	}
+  static delete<T>(url: string, options: HttpRequestOptionsWithBody): Promise<HttpResponse<T>> {
+    return this.request<T>({ method: 'DELETE', url, ...options });
+  }
 
-	static post<T>(url: string, options: HttpRequestOptionsWithBody): Promise<HttpResponse<T>> {
-		return this.request<T>({ method: 'POST', url, ...options });
-	}
+  static trace<T>(url: string, options: HttpRequestOptions): Promise<HttpResponse<T>> {
+    return this.request<T>({ method: 'TRACE', url, ...options });
+  }
 
-	static put<T>(url: string, options: HttpRequestOptionsWithBody): Promise<HttpResponse<T>> {
-		return this.request<T>({ method: 'PUT', url, ...options });
-	}
+  static head<T>(url: string, options: HttpRequestOptionsWithBody): Promise<HttpResponse<T>> {
+    return this.request<T>({ method: 'HEAD', url, ...options });
+  }
 
-	static patch<T>(url: string, options: HttpRequestOptionsWithBody): Promise<HttpResponse<T>> {
-		return this.request<T>({ method: 'PATCH', url, ...options });
-	}
+  static post<T>(url: string, options: HttpRequestOptionsWithBody): Promise<HttpResponse<T>> {
+    return this.request<T>({ method: 'POST', url, ...options });
+  }
 
-	private _url: string | undefined;
+  static put<T>(url: string, options: HttpRequestOptionsWithBody): Promise<HttpResponse<T>> {
+    return this.request<T>({ method: 'PUT', url, ...options });
+  }
 
-	constructor(private readonly _logger?: Logger) {}
-
-	setUrl(url: string): void {
-		this._url = url;
-	}
-
-	resolveUrl(url: string): string {
-		return this._url ? resolveUrl(this._url, url) : url;
-	}
-
-	request<T>(options: CommonHttpRequestOptions): Promise<HttpResponse<T>> {
-		return HttpClient.request<T>(options, this._logger);
-	}
-
-	get<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
-		return HttpClient.request<T>({ method: 'GET', url: this.resolveUrl(url), ...options }, this._logger);
-	}
-
-	delete<T>(url: string, options: HttpRequestOptionsWithBody = {}): Promise<HttpResponse<T>> {
-		return HttpClient.request<T>({ method: 'DELETE', url: this.resolveUrl(url), ...options }, this._logger);
-	}
-
-	trace<T>(url: string, options: HttpRequestOptions = {}): Promise<HttpResponse<T>> {
-		return HttpClient.request<T>({ method: 'TRACE', url: this.resolveUrl(url), ...options }, this._logger);
-	}
-
-	head<T>(url: string, options: HttpRequestOptionsWithBody = {}): Promise<HttpResponse<T>> {
-		return HttpClient.request<T>({ method: 'HEAD', url: this.resolveUrl(url), ...options }, this._logger);
-	}
-
-	post<T>(url: string, options: HttpRequestOptionsWithBody = {}): Promise<HttpResponse<T>> {
-		return HttpClient.request<T>({ method: 'POST', url: this.resolveUrl(url), ...options }, this._logger);
-	}
-
-	put<T>(url: string, options: HttpRequestOptionsWithBody = {}): Promise<HttpResponse<T>> {
-		return HttpClient.request<T>({ method: 'PUT', url: this.resolveUrl(url), ...options }, this._logger);
-	}
-
-	patch<T>(url: string, options: HttpRequestOptionsWithBody = {}): Promise<HttpResponse<T>> {
-		return HttpClient.request<T>({ method: 'PATCH', url: this.resolveUrl(url), ...options }, this._logger);
-	}
+  static patch<T>(url: string, options: HttpRequestOptionsWithBody): Promise<HttpResponse<T>> {
+    return this.request<T>({ method: 'PATCH', url, ...options });
+  }
 }
