@@ -25,9 +25,9 @@ export interface HttpRequestOptions {
   redirects?: number;
 
   /**
-	 * Request query stringifier
+	 * Request query serialzier
 	 */
-  queryStringifier?(query: Record<string, any>): string;
+  querySerializer?(query: any): string;
 
   /**
 	 * Body parser

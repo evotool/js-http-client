@@ -65,7 +65,7 @@ export class HttpClient {
       let { method, url, headers, query, body, redirects = 1, bodyParser = 'auto' } = options;
 
       const parsedUrl = new URL(url);
-      parsedUrl.search = this.serializeQuery(query);
+      parsedUrl.search = (options.querySerializer || this.serializeQuery)(query);
 
       if (!parsedUrl.port) {
         parsedUrl.port = parsedUrl.protocol === 'https:' ? '443' : '80';
