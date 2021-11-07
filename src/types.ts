@@ -2,7 +2,9 @@ import type { HttpHeaders } from './http-headers';
 
 export type HttpMethod = 'GET' | 'TRACE' | 'HEAD' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 export type HttpQueryValue = boolean | number | string | Date | (boolean | number | string | Date)[];
-export type HttpQuery = Record<string, HttpQueryValue | null | undefined>;
+export interface HttpQuery {
+  [key: string]: HttpQueryValue | null | undefined;
+}
 
 export interface HttpRequestOptions {
 
@@ -10,7 +12,7 @@ export interface HttpRequestOptions {
 	 * Request http headers
 	 * @default { 'Content-Type': typeof body === 'object' ? 'application/json; charset=utf-8' : 'text/plain; charset=utf-8', 'Content-Length': BodyByteLength }
 	 */
-  headers?: HttpHeaders | Record<string, number | string | string[]>;
+  headers?: HttpHeaders | { [key: string]: number | string | string[] };
 
   /**
 	 * Request query params

@@ -19,6 +19,7 @@ export class HttpClient {
   constructor(private readonly _logger?: Logger) {}
 
   setUrl(baseUrl: string): void {
+    this._logger?.debug(`Set base url. BaseUrl = ${baseUrl}`);
     this._baseUrl = baseUrl;
   }
 
@@ -61,6 +62,8 @@ export class HttpClient {
   static request(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<string | object | Buffer | null>>;
   static request<T>(options: CommonHttpRequestOptions, logger?: Logger): Promise<HttpResponse<T>>;
   static request<T>(options: CommonHttpRequestOptions, logger: Logger = this._logger, redirectFrom?: HttpResponse<T>): Promise<HttpResponse<T | string | object | Buffer | null>> {
+    logger?.debug(`Creating ${options.method} request. Url = ${options.url}`);
+
     return new Promise<HttpResponse<T | string | Buffer | null>>((resolve, reject) => {
       let { method, url, headers, query, body, redirects = 1, bodyParser = 'auto' } = options;
 
@@ -97,16 +100,19 @@ export class HttpClient {
             // @ts-ignore
             return resolve(this.request({ ...options, url }, logger, response));
           }
-        } else if (statusCode >= 400 && statusCode < 500) {
-          logger.debug('request fail with code', statusCode);
-        } else if (statusCode >= 500) {
-          logger.debug('request fail with code', statusCode);
+        } else if (statusCode >= 400) {
+          logger.debug(`Request HTTP error. Code = ${statusCode}.`);
+
+          reject(new Error('Request HTTP error'));
+
+          return;
         }
 
         resolve(response);
       };
 
       if (body instanceof FormData) {
+        logger?.debug(`Submiting FormData.`);
         body.submit(requestOptions, (err, res) => err ? reject(err) : callback(res));
 
         return;
@@ -115,25 +121,25 @@ export class HttpClient {
       const requestHandler = requestOptions.protocol === 'http:' ? httpRequest : httpsRequest;
       const req = requestHandler(requestOptions, callback);
 
-      let status = 0; // 0 - pending, 1 - resolved, 2 - rejected
+      let handled = false;
 
       req.on('error', (err) => {
-        if (status > 0) {
+        if (handled) {
           return;
         }
 
-        status = 2;
+        handled = true;
         reject(err);
-        logger.debug(`${url} request error: ${err.message}`);
+        logger.debug(`Request error. Url = ${url}, error = ${err.message}.`);
       });
 
       req.on('finish', () => {
-        if (status > 0) {
+        if (handled) {
           return;
         }
 
-        status = 1;
-        logger.debug(`${url} request finish`);
+        handled = true;
+        logger.debug(`Request finish. Url = ${url}.`);
       });
 
       if (body && method !== 'GET' && method !== 'TRACE') {
